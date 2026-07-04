@@ -1114,6 +1114,35 @@ function renderSRPanel(data) {
 // ============================================================
 // Analysis Text Renderers
 // ============================================================
+function renderCollapsibleSection(title, items, icon) {
+  if (!items || items.length === 0) return '';
+  const id = 'collapse_' + Math.random().toString(36).substr(2, 8);
+  const listItems = Array.isArray(items)
+    ? items.map(i => `<li>${i}</li>`).join('')
+    : Object.entries(items).map(([k, v]) => `<li><b>${k}：</b>${v}</li>`).join('');
+  return `
+    <div class="collapsible" style="margin-top:8px;">
+      <div class="collapsible-header" onclick="toggleCollapse('${id}')" style="cursor:pointer;padding:6px 0;font-size:0.8rem;font-weight:600;color:var(--blue);border-top:1px solid var(--border);">
+        ${icon} ${title} <span style="float:right;font-size:0.7rem;" id="${id}_arrow">▼</span>
+      </div>
+      <div class="collapsible-body" id="${id}" style="display:none;font-size:0.78rem;color:var(--text-secondary);line-height:1.8;padding:4px 0 4px 8px;">
+        <ul style="margin:0;padding-left:16px;">${listItems}</ul>
+      </div>
+    </div>`;
+}
+
+function toggleCollapse(id) {
+  const body = document.getElementById(id);
+  const arrow = document.getElementById(id + '_arrow');
+  if (body.style.display === 'none') {
+    body.style.display = 'block';
+    arrow.textContent = '▲';
+  } else {
+    body.style.display = 'none';
+    arrow.textContent = '▼';
+  }
+}
+
 function renderAnalysisBox(elementId, analysis, defaultCls) {
   const el = document.getElementById(elementId);
   if (!el || !analysis) return;
@@ -1141,7 +1170,6 @@ function renderAnalysisBox(elementId, analysis, defaultCls) {
     }
     html += `<div class="analysis-verdict">📌 综合判断：${analysis.verdict}</div>`;
   } else if (analysis.zone && analysis.position) {
-    // MACD
     html += `<div class="analysis-item">📊 ${analysis.zone}</div>`;
     html += `<div class="analysis-item">📈 ${analysis.position}</div>`;
     html += `<div class="analysis-item">📉 ${analysis.hist_trend}</div>`;
@@ -1149,33 +1177,28 @@ function renderAnalysisBox(elementId, analysis, defaultCls) {
     html += `<div class="analysis-item">🔢 ${analysis.values}</div>`;
     html += `<div class="analysis-verdict">📌 综合判断：${analysis.verdict}</div>`;
   } else if (analysis.zone && analysis.trend && analysis.divergence) {
-    // RSI
     html += `<div class="analysis-item">📊 ${analysis.zone}</div>`;
     html += `<div class="analysis-item">📈 ${analysis.trend}</div>`;
     html += `<div class="analysis-item">${analysis.divergence.includes('⚠') ? '⚠️' : '💡'} ${analysis.divergence}</div>`;
     html += `<div class="analysis-verdict">📌 综合判断：${analysis.verdict}</div>`;
   } else if (analysis.zone && analysis.cross && analysis.values) {
-    // KDJ
     html += `<div class="analysis-item">📊 ${analysis.zone}</div>`;
     html += `<div class="analysis-item">🔀 ${analysis.cross}</div>`;
     html += `<div class="analysis-item">🔢 ${analysis.values}</div>`;
     html += `<div class="analysis-verdict">📌 综合判断：${analysis.verdict}</div>`;
   } else if (analysis.position && analysis.squeeze) {
-    // Bollinger
     html += `<div class="analysis-item">📍 ${analysis.position}</div>`;
     html += `<div class="analysis-item">🔍 ${analysis.squeeze}</div>`;
     html += `<div class="analysis-item">📏 ${analysis.band_values}</div>`;
     html += `<div class="analysis-item">📐 带宽：${analysis.width_pct}%</div>`;
     html += `<div class="analysis-verdict">📌 综合判断：${analysis.verdict}</div>`;
   } else if (analysis.trend && analysis.pv_relation) {
-    // Volume
     html += `<div class="analysis-item">📊 ${analysis.trend}</div>`;
     html += `<div class="analysis-item">⚡ ${analysis.pv_relation}</div>`;
     html += `<div class="analysis-item">📈 ${analysis.recent_avg_5d} | ${analysis.recent_avg_20d}</div>`;
     html += `<div class="analysis-item">🔍 ${analysis.max_vol_event}</div>`;
     html += `<div class="analysis-verdict">📌 综合判断：${analysis.verdict}</div>`;
   } else if (analysis.levels) {
-    // S/R
     html += `<div class="analysis-item">📈 上涨空间：+${analysis.upside_pct}%（至最近阻力）</div>`;
     html += `<div class="analysis-item">📉 下跌风险：-${analysis.downside_pct}%（至最近支撑）</div>`;
     html += `<div class="analysis-item">⚖ 风险收益比：${analysis.rr_ratio}:1</div>`;
@@ -1184,6 +1207,16 @@ function renderAnalysisBox(elementId, analysis, defaultCls) {
       html += `<div class="sr-detail">${icon} ${l.desc}</div>`;
     });
     html += `<div class="analysis-verdict">📌 综合判断：${analysis.verdict}</div>`;
+  }
+
+  // Add methodology (collapsible)
+  if (analysis.methodology) {
+    html += renderCollapsibleSection('📖 指标原理与方法', analysis.methodology, '');
+  }
+
+  // Add interpretation (collapsible)
+  if (analysis.interpretation) {
+    html += renderCollapsibleSection('🎯 指标解读与应用指南', analysis.interpretation, '');
   }
 
   el.innerHTML = html;
