@@ -1,0 +1,1150 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AKQuant - 中芯国际 (688981) 量化分析仪表盘</title>
+<script src="https://cdn.plot.ly/plotly-2.35.2.min.js"></script>
+<style>
+:root {
+  --surface-1: #1a1a19;
+  --surface-2: #222221;
+  --surface-3: #2a2a28;
+  --text-primary: #ffffff;
+  --text-secondary: #c3c2b7;
+  --text-muted: #8a8982;
+  --blue: #3987e5;
+  --aqua: #199e70;
+  --yellow: #c98500;
+  --green: #2ecc71;
+  --violet: #9085e9;
+  --red: #e66767;
+  --magenta: #d55181;
+  --orange: #d95926;
+  --up-color: #e66767;
+  --down-color: #199e70;
+  --border: #3a3a36;
+  --radius: 8px;
+  --shadow: 0 2px 12px rgba(0,0,0,0.3);
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC",
+               "Microsoft YaHei", sans-serif;
+  background: var(--surface-1);
+  color: var(--text-primary);
+  line-height: 1.6;
+}
+
+/* Header */
+.header {
+  background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+  border-bottom: 2px solid var(--blue);
+  padding: 16px 24px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+}
+
+.header-left h1 {
+  font-size: 1.5rem;
+  font-weight: 700;
+  background: linear-gradient(90deg, var(--blue), var(--violet));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.header-left .subtitle {
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+}
+
+.header-center {
+  display: flex;
+  gap: 16px;
+  align-items: center;
+}
+
+.header-right {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+
+.stock-badge {
+  background: var(--surface-3);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 8px 14px;
+  text-align: center;
+}
+
+.stock-badge .code { font-size: 0.75rem; color: var(--text-muted); }
+.stock-badge .name { font-size: 0.95rem; font-weight: 600; }
+
+.price-badge {
+  text-align: right;
+}
+.price-badge .price {
+  font-size: 1.5rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+.price-badge .change {
+  font-size: 0.85rem;
+}
+
+.price-up { color: var(--up-color); }
+.price-down { color: var(--down-color); }
+
+.refresh-btn {
+  background: var(--blue);
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  padding: 8px 16px;
+  cursor: pointer;
+  font-size: 0.85rem;
+  font-weight: 500;
+  transition: opacity 0.2s;
+}
+.refresh-btn:hover { opacity: 0.85; }
+
+/* Dashboard grid */
+.dashboard {
+  max-width: 1600px;
+  margin: 0 auto;
+  padding: 16px;
+  display: grid;
+  gap: 16px;
+}
+
+/* Stats row */
+.stats-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 12px;
+}
+
+.stat-card {
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 14px 16px;
+}
+
+.stat-card .stat-label {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.stat-card .stat-value {
+  font-size: 1.25rem;
+  font-weight: 700;
+  margin-top: 4px;
+  font-variant-numeric: tabular-nums;
+}
+
+.stat-card .stat-sub {
+  font-size: 0.78rem;
+  color: var(--text-secondary);
+  margin-top: 2px;
+}
+
+/* Chart panels */
+.charts-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+
+.charts-grid.full { grid-template-columns: 1fr; }
+
+.panel {
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  overflow: hidden;
+}
+
+.panel-header {
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: var(--surface-3);
+}
+
+.panel-header h3 {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.panel-badge {
+  font-size: 0.7rem;
+  padding: 2px 8px;
+  border-radius: 10px;
+  background: var(--blue);
+  color: #fff;
+  opacity: 0.8;
+}
+
+.panel-body {
+  padding: 8px;
+}
+
+.panel-body .plotly-chart {
+  width: 100%;
+}
+
+/* SR levels */
+.sr-panel {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.sr-section h4 {
+  font-size: 0.82rem;
+  margin-bottom: 8px;
+}
+
+.level-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.level-bar:last-child { border-bottom: none; }
+
+.level-price {
+  font-weight: 700;
+  font-size: 0.95rem;
+  min-width: 70px;
+  font-variant-numeric: tabular-nums;
+}
+
+.level-pct {
+  font-size: 0.78rem;
+  color: var(--text-secondary);
+  min-width: 50px;
+}
+
+.level-indicator {
+  flex: 1;
+  height: 4px;
+  border-radius: 2px;
+}
+
+.level-indicator.resistance { background: var(--red); }
+.level-indicator.support { background: var(--aqua); }
+
+/* Quantitative Analysis */
+.qa-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 12px;
+  padding: 12px;
+}
+
+.qa-item {
+  padding: 8px 0;
+}
+
+.qa-item .qa-label {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+}
+
+.qa-item .qa-value {
+  font-size: 1.1rem;
+  font-weight: 600;
+  margin-top: 2px;
+}
+
+.qa-signal {
+  display: inline-block;
+  padding: 2px 10px;
+  border-radius: 12px;
+  font-size: 0.78rem;
+  font-weight: 600;
+}
+
+.qa-signal.bullish { background: rgba(46,204,113,0.15); color: var(--green); }
+.qa-signal.bearish { background: rgba(230,103,103,0.15); color: var(--red); }
+.qa-signal.neutral { background: rgba(201,133,0,0.15); color: var(--yellow); }
+
+/* Tooltip override */
+.js-plotly-plot .plotly .main-svg {
+  border-radius: 4px;
+}
+
+/* Table */
+.data-table-wrap {
+  max-height: 400px;
+  overflow-y: auto;
+}
+
+.data-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.8rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.data-table th {
+  background: var(--surface-3);
+  padding: 8px 10px;
+  text-align: right;
+  font-weight: 600;
+  color: var(--text-secondary);
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  white-space: nowrap;
+}
+
+.data-table th:first-child { text-align: left; }
+
+.data-table td {
+  padding: 6px 10px;
+  text-align: right;
+  border-bottom: 1px solid var(--border);
+  white-space: nowrap;
+}
+
+.data-table td:first-child {
+  text-align: left;
+  font-weight: 500;
+}
+
+.data-table .up { color: var(--up-color); }
+.data-table .down { color: var(--down-color); }
+
+/* Footer */
+.footer {
+  text-align: center;
+  padding: 16px;
+  color: var(--text-muted);
+  font-size: 0.75rem;
+  border-top: 1px solid var(--border);
+}
+
+/* Responsive */
+@media (max-width: 1024px) {
+  .charts-grid { grid-template-columns: 1fr; }
+  .header { flex-direction: column; gap: 8px; }
+  .stats-row { grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); }
+}
+
+/* Scrollbar */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: var(--surface-1); }
+::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+
+.last-updated {
+  font-size: 0.7rem;
+  color: var(--text-muted);
+  text-align: right;
+  padding: 4px 16px;
+}
+
+/* Signal card highlight */
+.signal-card {
+  padding: 14px 16px;
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+  background: var(--surface-2);
+}
+
+.signal-card.warning {
+  border-color: var(--yellow);
+  background: linear-gradient(135deg, rgba(201,133,0,0.08), transparent);
+}
+
+.signal-card.danger {
+  border-color: var(--red);
+  background: linear-gradient(135deg, rgba(230,103,103,0.08), transparent);
+}
+
+.signal-card.bullish {
+  border-color: var(--green);
+  background: linear-gradient(135deg, rgba(46,204,113,0.08), transparent);
+}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-left">
+    <h1>AKQuant 量化分析平台</h1>
+    <div class="subtitle">Advanced Quantitative Trading Dashboard</div>
+  </div>
+  <div class="header-center">
+    <div class="stock-badge">
+      <div class="code">688981.SH</div>
+      <div class="name">中芯国际</div>
+    </div>
+  </div>
+  <div class="header-right">
+    <div class="price-badge" id="priceBadge">
+      <div class="price">--</div>
+      <div class="change">--</div>
+    </div>
+    <button class="refresh-btn" onclick="location.reload()">⟳ 刷新数据</button>
+  </div>
+</div>
+
+<div class="last-updated" id="lastUpdated">数据加载中...</div>
+
+<div class="dashboard">
+
+  <!-- Stats Row -->
+  <div class="stats-row" id="statsRow"></div>
+
+  <!-- Main K-Line Chart -->
+  <div class="charts-grid full">
+    <div class="panel">
+      <div class="panel-header">
+        <h3>📈 K线蜡烛图 · 均线系统</h3>
+        <span class="panel-badge">MA5/10/20/60</span>
+      </div>
+      <div class="panel-body">
+        <div id="chartKline" class="plotly-chart" style="height:520px"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MACD + RSI -->
+  <div class="charts-grid">
+    <div class="panel">
+      <div class="panel-header">
+        <h3>📊 MACD 指标</h3>
+        <span class="panel-badge">MACD(12,26,9)</span>
+      </div>
+      <div class="panel-body">
+        <div id="chartMACD" class="plotly-chart" style="height:300px"></div>
+      </div>
+    </div>
+    <div class="panel">
+      <div class="panel-header">
+        <h3>📉 RSI 相对强弱指标</h3>
+        <span class="panel-badge">RSI(14)</span>
+      </div>
+      <div class="panel-body">
+        <div id="chartRSI" class="plotly-chart" style="height:300px"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- KDJ + Bollinger -->
+  <div class="charts-grid">
+    <div class="panel">
+      <div class="panel-header">
+        <h3>🎯 KDJ 随机指标</h3>
+        <span class="panel-badge">KDJ(9,3,3)</span>
+      </div>
+      <div class="panel-body">
+        <div id="chartKDJ" class="plotly-chart" style="height:300px"></div>
+      </div>
+    </div>
+    <div class="panel">
+      <div class="panel-header">
+        <h3>📐 布林带 Bollinger Bands</h3>
+        <span class="panel-badge">BOLL(20,2)</span>
+      </div>
+      <div class="panel-body">
+        <div id="chartBOLL" class="plotly-chart" style="height:300px"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Volume + SR Levels -->
+  <div class="charts-grid">
+    <div class="panel">
+      <div class="panel-header">
+        <h3>📦 成交量分析</h3>
+        <span class="panel-badge">VOL MA5/20</span>
+      </div>
+      <div class="panel-body">
+        <div id="chartVolume" class="plotly-chart" style="height:300px"></div>
+      </div>
+    </div>
+    <div class="panel">
+      <div class="panel-header">
+        <h3>⚡ 支撑与阻力位</h3>
+        <span class="panel-badge">S/R Analysis</span>
+      </div>
+      <div class="panel-body">
+        <div class="sr-panel" id="srPanel"></div>
+        <div id="chartSR" class="plotly-chart" style="height:240px"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Quantitative Analysis -->
+  <div class="charts-grid full">
+    <div class="panel">
+      <div class="panel-header">
+        <h3>🧠 量化综合分析</h3>
+        <span class="panel-badge">Quant Analysis</span>
+      </div>
+      <div class="panel-body">
+        <div class="qa-grid" id="qaGrid"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Recent Data Table -->
+  <div class="charts-grid full">
+    <div class="panel">
+      <div class="panel-header">
+        <h3>📋 最近20交易日数据</h3>
+        <span class="panel-badge">Raw Data</span>
+      </div>
+      <div class="panel-body">
+        <div class="data-table-wrap">
+          <table class="data-table" id="dataTable">
+            <thead><tr></tr></thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<div class="footer">
+  AKQuant © 2026 · 数据来源: East Money · 中芯国际 (688981.SH) · 仅作技术研究参考，不构成投资建议
+</div>
+
+<script>
+// ============================================================
+// AKQuant Dashboard - Main Application
+// ============================================================
+
+const SURFACE = '#1a1a19';
+const TEXT_PRIMARY = '#ffffff';
+const TEXT_SECONDARY = '#c3c2b7';
+const GRID_COLOR = 'rgba(58,58,54,0.5)';
+
+// Load JSON data
+async function loadData() {
+  try {
+    const resp = await fetch('data/dashboard_data.json');
+    if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+    return await resp.json();
+  } catch (e) {
+    console.error('Failed to load data:', e);
+    document.getElementById('lastUpdated').textContent = '⚠ 数据加载失败，请先运行 calculate_indicators.py';
+    return null;
+  }
+}
+
+// Template for dark-themed Plotly
+function darkLayout(title, height = 300) {
+  return {
+    title: { text: '', },
+    height: height,
+    paper_bgcolor: SURFACE,
+    plot_bgcolor: SURFACE,
+    font: { color: TEXT_SECONDARY, size: 11 },
+    margin: { l: 60, r: 30, t: 20, b: 40 },
+    xaxis: {
+      gridcolor: GRID_COLOR,
+      linecolor: GRID_COLOR,
+      zerolinecolor: GRID_COLOR,
+      showgrid: true,
+    },
+    yaxis: {
+      gridcolor: GRID_COLOR,
+      linecolor: GRID_COLOR,
+      zerolinecolor: GRID_COLOR,
+      showgrid: true,
+      side: 'right',
+    },
+    legend: {
+      orientation: 'h',
+      x: 0,
+      y: 1.12,
+      font: { size: 10, color: TEXT_SECONDARY },
+    },
+    hovermode: 'x unified',
+    dragmode: 'pan',
+  };
+}
+
+// Get data arrays
+function getArrays(data) {
+  const ohlc = data.ohlc;
+  const dates = ohlc.map(d => d.date);
+  return { ohlc, dates };
+}
+
+// ============================================================
+// Main K-Line Candlestick Chart
+// ============================================================
+function renderKline(data) {
+  const { ohlc, dates } = getArrays(data);
+
+  const candlestick = {
+    type: 'candlestick',
+    x: dates,
+    open: ohlc.map(d => d.open),
+    high: ohlc.map(d => d.high),
+    low: ohlc.map(d => d.low),
+    close: ohlc.map(d => d.close),
+    increasing: { line: { color: '#e66767' }, fillcolor: '#e66767' },
+    decreasing: { line: { color: '#199e70' }, fillcolor: '#199e70' },
+    name: 'K线',
+    showlegend: true,
+    hoverlabel: { namelength: -1 },
+  };
+
+  const maColors = {
+    MA5: '#3987e5',    // blue
+    MA10: '#c98500',   // yellow
+    MA20: '#d55181',   // magenta
+    MA60: '#9085e9',   // violet
+  };
+
+  const maTraces = ['MA5', 'MA10', 'MA20', 'MA60'].map(ma => ({
+    type: 'scatter',
+    x: dates,
+    y: ohlc.map(d => d[ma]),
+    mode: 'lines',
+    line: { width: 1.5, color: maColors[ma] },
+    name: ma,
+    showlegend: true,
+  }));
+
+  // Add support/resistance horizontal lines
+  const srLines = [];
+  data.support_resistance.resistance.forEach((r, i) => {
+    srLines.push({
+      type: 'scatter',
+      x: [dates[0], dates[dates.length - 1]],
+      y: [r, r],
+      mode: 'lines',
+      line: { width: 1, color: '#e66767', dash: 'dash' },
+      name: `阻力${i+1}: ¥${r}`,
+      showlegend: false,
+      hoverinfo: 'name',
+    });
+  });
+  data.support_resistance.support.forEach((s, i) => {
+    srLines.push({
+      type: 'scatter',
+      x: [dates[0], dates[dates.length - 1]],
+      y: [s, s],
+      mode: 'lines',
+      line: { width: 1, color: '#199e70', dash: 'dash' },
+      name: `支撑${i+1}: ¥${s}`,
+      showlegend: false,
+      hoverinfo: 'name',
+    });
+  });
+
+  const traces = [candlestick, ...maTraces, ...srLines];
+
+  const layout = darkLayout('', 520);
+  layout.xaxis.rangeslider = { visible: false };
+  layout.yaxis.title = { text: '价格 (¥)', font: { size: 11 } };
+  layout.legend.orientation = 'h';
+  layout.legend.y = 1.15;
+
+  const config = {
+    responsive: true,
+    displayModeBar: true,
+    modeBarButtonsToRemove: ['lasso2d', 'select2d'],
+    displaylogo: false,
+  };
+
+  Plotly.newPlot('chartKline', traces, layout, config);
+}
+
+// ============================================================
+// MACD Chart
+// ============================================================
+function renderMACD(data) {
+  const { ohlc, dates } = getArrays(data);
+
+  const histColors = ohlc.map(d =>
+    (d.MACD_HIST || 0) >= 0 ? '#e66767' : '#199e70'
+  );
+
+  const hist = {
+    type: 'bar',
+    x: dates,
+    y: ohlc.map(d => d.MACD_HIST),
+    marker: { color: histColors },
+    name: 'MACD柱',
+    showlegend: true,
+  };
+
+  const dif = {
+    type: 'scatter',
+    x: dates,
+    y: ohlc.map(d => d.MACD_DIF),
+    mode: 'lines',
+    line: { width: 1.5, color: '#3987e5' },
+    name: 'DIF',
+  };
+
+  const dea = {
+    type: 'scatter',
+    x: dates,
+    y: ohlc.map(d => d.MACD_DEA),
+    mode: 'lines',
+    line: { width: 1.5, color: '#c98500' },
+    name: 'DEA',
+  };
+
+  // Zero line
+  const zero = {
+    type: 'scatter',
+    x: [dates[0], dates[dates.length - 1]],
+    y: [0, 0],
+    mode: 'lines',
+    line: { width: 0.5, color: TEXT_SECONDARY, dash: 'dot' },
+    name: '零轴',
+    showlegend: false,
+    hoverinfo: 'skip',
+  };
+
+  const layout = darkLayout('', 300);
+  Plotly.newPlot('chartMACD', [hist, dif, dea, zero], layout, { responsive: true, displaylogo: false });
+}
+
+// ============================================================
+// RSI Chart
+// ============================================================
+function renderRSI(data) {
+  const { ohlc, dates } = getArrays(data);
+
+  const rsi = {
+    type: 'scatter',
+    x: dates,
+    y: ohlc.map(d => d.RSI),
+    mode: 'lines',
+    line: { width: 1.5, color: '#9085e9' },
+    fill: 'tozeroy',
+    fillcolor: 'rgba(144,133,233,0.08)',
+    name: 'RSI(14)',
+  };
+
+  // Overbought / Oversold lines
+  const ob = {
+    type: 'scatter',
+    x: [dates[0], dates[dates.length - 1]],
+    y: [70, 70],
+    mode: 'lines',
+    line: { width: 1, color: '#e66767', dash: 'dash' },
+    name: '超买线 70',
+    hoverinfo: 'name',
+  };
+  const os = {
+    type: 'scatter',
+    x: [dates[0], dates[dates.length - 1]],
+    y: [30, 30],
+    mode: 'lines',
+    line: { width: 1, color: '#199e70', dash: 'dash' },
+    name: '超卖线 30',
+    hoverinfo: 'name',
+  };
+  const mid = {
+    type: 'scatter',
+    x: [dates[0], dates[dates.length - 1]],
+    y: [50, 50],
+    mode: 'lines',
+    line: { width: 0.5, color: TEXT_SECONDARY, dash: 'dot' },
+    name: '中线',
+    showlegend: false,
+    hoverinfo: 'skip',
+  };
+
+  const layout = darkLayout('', 300);
+  layout.yaxis.range = [0, 100];
+  Plotly.newPlot('chartRSI', [rsi, ob, os, mid], layout, { responsive: true, displaylogo: false });
+}
+
+// ============================================================
+// KDJ Chart
+// ============================================================
+function renderKDJ(data) {
+  const { ohlc, dates } = getArrays(data);
+
+  const kLine = {
+    type: 'scatter', x: dates, y: ohlc.map(d => d.K),
+    mode: 'lines', line: { width: 1.5, color: '#3987e5' }, name: 'K值',
+  };
+  const dLine = {
+    type: 'scatter', x: dates, y: ohlc.map(d => d.D),
+    mode: 'lines', line: { width: 1.5, color: '#c98500' }, name: 'D值',
+  };
+  const jLine = {
+    type: 'scatter', x: dates, y: ohlc.map(d => d.J),
+    mode: 'lines', line: { width: 1.5, color: '#d55181' }, name: 'J值',
+  };
+
+  const layout = darkLayout('', 300);
+  layout.yaxis.range = [0, 100];
+  Plotly.newPlot('chartKDJ', [kLine, dLine, jLine], layout, { responsive: true, displaylogo: false });
+}
+
+// ============================================================
+// Bollinger Bands Chart
+// ============================================================
+function renderBOLL(data) {
+  const { ohlc, dates } = getArrays(data);
+
+  // Filled band
+  const bandFill = {
+    type: 'scatter',
+    x: [...dates, ...dates.slice().reverse()],
+    y: [
+      ...ohlc.map(d => d.BOLL_UP),
+      ...ohlc.map(d => d.BOLL_DN).reverse(),
+    ],
+    fill: 'toself',
+    fillcolor: 'rgba(57,135,229,0.08)',
+    line: { width: 0 },
+    name: '布林带区间',
+    showlegend: true,
+    hoverinfo: 'skip',
+  };
+
+  const upper = {
+    type: 'scatter', x: dates, y: ohlc.map(d => d.BOLL_UP),
+    mode: 'lines', line: { width: 1, color: '#e66767', dash: 'dash' }, name: '上轨',
+  };
+  const mid = {
+    type: 'scatter', x: dates, y: ohlc.map(d => d.BOLL_MID),
+    mode: 'lines', line: { width: 1.5, color: '#3987e5' }, name: '中轨 MA20',
+  };
+  const lower = {
+    type: 'scatter', x: dates, y: ohlc.map(d => d.BOLL_DN),
+    mode: 'lines', line: { width: 1, color: '#199e70', dash: 'dash' }, name: '下轨',
+  };
+  const priceLine = {
+    type: 'scatter', x: dates, y: ohlc.map(d => d.close),
+    mode: 'lines', line: { width: 1.5, color: TEXT_PRIMARY }, name: '收盘价',
+  };
+
+  const layout = darkLayout('', 300);
+  Plotly.newPlot('chartBOLL', [bandFill, upper, mid, lower, priceLine], layout, { responsive: true, displaylogo: false });
+}
+
+// ============================================================
+// Volume Chart
+// ============================================================
+function renderVolume(data) {
+  const { ohlc, dates } = getArrays(data);
+
+  // Color bars by price direction
+  const volColors = ohlc.map((d, i) => {
+    if (i === 0) return '#199e70';
+    return d.close >= ohlc[i-1].close ? '#e66767' : '#199e70';
+  });
+
+  const volBars = {
+    type: 'bar',
+    x: dates,
+    y: ohlc.map(d => d.volume),
+    marker: { color: volColors, opacity: 0.7 },
+    name: '成交量',
+  };
+
+  const ma5 = {
+    type: 'scatter', x: dates, y: ohlc.map(d => d.VOL_MA5),
+    mode: 'lines', line: { width: 1.5, color: '#c98500' }, name: 'VOL MA5',
+  };
+  const ma20 = {
+    type: 'scatter', x: dates, y: ohlc.map(d => d.VOL_MA20),
+    mode: 'lines', line: { width: 1.5, color: '#9085e9' }, name: 'VOL MA20',
+  };
+
+  const layout = darkLayout('', 300);
+  layout.yaxis.title = { text: '成交量 (股)', font: { size: 10 } };
+  Plotly.newPlot('chartVolume', [volBars, ma5, ma20], layout, { responsive: true, displaylogo: false });
+}
+
+// ============================================================
+// Support & Resistance Chart
+// ============================================================
+function renderSR(data) {
+  const { ohlc, dates } = getArrays(data);
+  const sr = data.support_resistance;
+
+  // Recent price line
+  const recent = ohlc.slice(-60);
+  const recentDates = dates.slice(-60);
+
+  const priceLine = {
+    type: 'scatter', x: recentDates, y: recent.map(d => d.close),
+    mode: 'lines', line: { width: 2, color: TEXT_PRIMARY }, name: '收盘价',
+  };
+
+  const hrLines = [];
+  sr.resistance.forEach(r => {
+    hrLines.push({
+      type: 'scatter',
+      x: [recentDates[0], recentDates[recentDates.length - 1]],
+      y: [r, r],
+      mode: 'lines',
+      line: { width: 1.5, color: '#e66767', dash: 'dashdot' },
+      name: `阻力 ¥${r}`,
+    });
+  });
+  sr.support.forEach(s => {
+    hrLines.push({
+      type: 'scatter',
+      x: [recentDates[0], recentDates[recentDates.length - 1]],
+      y: [s, s],
+      mode: 'lines',
+      line: { width: 1.5, color: '#199e70', dash: 'dashdot' },
+      name: `支撑 ¥${s}`,
+    });
+  });
+
+  const layout = darkLayout('', 240);
+  Plotly.newPlot('chartSR', [priceLine, ...hrLines], layout, { responsive: true, displaylogo: false });
+}
+
+// ============================================================
+// Stats Row
+// ============================================================
+function renderStats(data) {
+  const s = data.summary;
+  const meta = data.metadata;
+  const sr = data.support_resistance;
+
+  const stats = [
+    { label: '最新价格', value: `¥${s.current_price}`, sub: `${s.chg_1d >= 0 ? '+' : ''}${s.chg_1d}%`, cls: s.chg_1d >= 0 ? 'price-up' : 'price-down' },
+    { label: '5日涨跌', value: `${s.chg_5d >= 0 ? '+' : ''}${s.chg_5d}%`, sub: '5交易日', cls: s.chg_5d >= 0 ? 'price-up' : 'price-down' },
+    { label: '20日涨跌', value: `${s.chg_20d >= 0 ? '+' : ''}${s.chg_20d}%`, sub: '20交易日', cls: s.chg_20d >= 0 ? 'price-up' : 'price-down' },
+    { label: 'RSI(14)', value: `${s.rsi}`, sub: s.rsi > 70 ? '超买区间' : s.rsi < 30 ? '超卖区间' : '正常区间', cls: '' },
+    { label: '波动率(20d)', value: `${s.volatility_20d}%`, sub: '标准差', cls: '' },
+    { label: '量比', value: `${s.vol_ratio}`, sub: s.vol_ratio > 1.5 ? '放量' : s.vol_ratio < 0.5 ? '缩量' : '正常', cls: '' },
+    { label: '趋势判断', value: s.trend, sub: `${s.above_ma_count}/3 均线上方`, cls: s.trend.includes('强') ? 'price-up' : '' },
+    { label: '最近阻力', value: `¥${sr.resistance[0] || 'N/A'}`, sub: sr.resistance[1] ? `次阻 ¥${sr.resistance[1]}` : '', cls: '' },
+    { label: '最近支撑', value: `¥${sr.support[0] || 'N/A'}`, sub: sr.support[1] ? `次撑 ¥${sr.support[1]}` : '', cls: '' },
+    { label: 'MA20偏离', value: `${s.ma20_position >= 0 ? '+' : ''}${s.ma20_position}%`, sub: '相对MA20', cls: s.ma20_position >= 0 ? 'price-up' : 'price-down' },
+    { label: '数据量', value: `${meta.data_points}`, sub: `${meta.date_range[0]} ~ ${meta.date_range[1]}`, cls: '' },
+  ];
+
+  const row = document.getElementById('statsRow');
+  row.innerHTML = stats.map(st => `
+    <div class="stat-card">
+      <div class="stat-label">${st.label}</div>
+      <div class="stat-value ${st.cls}">${st.value}</div>
+      <div class="stat-sub">${st.sub}</div>
+    </div>
+  `).join('');
+
+  // Update header price
+  const priceBadge = document.getElementById('priceBadge');
+  const cls = s.chg_1d >= 0 ? 'price-up' : 'price-down';
+  const sign = s.chg_1d >= 0 ? '+' : '';
+  priceBadge.innerHTML = `
+    <div class="price ${cls}">¥${s.current_price}</div>
+    <div class="change ${cls}">${sign}${s.chg_1d}% 今日</div>
+  `;
+}
+
+// ============================================================
+// Support & Resistance Panel
+// ============================================================
+function renderSRPanel(data) {
+  const sr = data.support_resistance;
+  const price = data.summary.current_price;
+
+  const resHTML = sr.resistance.map(r => {
+    const pct = ((r / price - 1) * 100).toFixed(1);
+    return `
+      <div class="level-bar">
+        <span class="level-price" style="color:#e66767">¥${r}</span>
+        <div class="level-indicator resistance" style="flex:${Math.min(pct * 2, 10)}"></div>
+        <span class="level-pct">+${pct}%</span>
+      </div>`;
+  }).join('') || '<div class="level-bar">暂无</div>';
+
+  const supHTML = sr.support.map(s => {
+    const pct = ((price / s - 1) * 100).toFixed(1);
+    return `
+      <div class="level-bar">
+        <span class="level-price" style="color:#199e70">¥${s}</span>
+        <div class="level-indicator support" style="flex:${Math.min(pct * 2, 10)}"></div>
+        <span class="level-pct">-${pct}%</span>
+      </div>`;
+  }).join('') || '<div class="level-bar">暂无</div>';
+
+  document.getElementById('srPanel').innerHTML = `
+    <div class="sr-section">
+      <h4 style="color:#e66767">🔴 阻力位</h4>
+      ${resHTML}
+    </div>
+    <div class="sr-section">
+      <h4 style="color:#199e70">🟢 支撑位</h4>
+      ${supHTML}
+    </div>
+  `;
+}
+
+// ============================================================
+// Quantitative Analysis Panel
+// ============================================================
+function renderQA(data) {
+  const s = data.summary;
+  const sr = data.support_resistance;
+
+  // Generate quant signals
+  const signals = [];
+
+  // RSI signal
+  if (s.rsi > 70) signals.push({ label: 'RSI信号', value: '超买', cls: 'bearish', detail: `RSI=${s.rsi}，高于70为超买区间，短期可能回调` });
+  else if (s.rsi < 30) signals.push({ label: 'RSI信号', value: '超卖', cls: 'bullish', detail: `RSI=${s.rsi}，低于30为超卖区间，短期可能反弹` });
+  else signals.push({ label: 'RSI信号', value: '中性', cls: 'neutral', detail: `RSI=${s.rsi}，处于30-70正常区间` });
+
+  // MA trend
+  if (s.above_ma_count >= 3) signals.push({ label: '均线趋势', value: '多头排列', cls: 'bullish', detail: `价格站上MA5/10/20/60所有均线` });
+  else if (s.above_ma_count >= 2) signals.push({ label: '均线趋势', value: '偏多', cls: 'neutral', detail: `价格在${s.above_ma_count}条主要均线上方` });
+  else if (s.above_ma_count >= 1) signals.push({ label: '均线趋势', value: '偏空', cls: 'neutral', detail: `价格仅站上${s.above_ma_count}条均线` });
+  else signals.push({ label: '均线趋势', value: '空头排列', cls: 'bearish', detail: '价格在所有主要均线下方' });
+
+  // Volume signal
+  if (s.vol_ratio > 1.5) signals.push({ label: '成交量', value: '放量', cls: 'bullish', detail: `量比${s.vol_ratio}，交投活跃` });
+  else if (s.vol_ratio < 0.5) signals.push({ label: '成交量', value: '缩量', cls: 'neutral', detail: `量比${s.vol_ratio}，交投清淡` });
+  else signals.push({ label: '成交量', value: '正常', cls: 'neutral', detail: `量比${s.vol_ratio}，交投平稳` });
+
+  // MA20 position
+  signals.push({
+    label: 'MA20偏离', value: `${s.ma20_position >= 0 ? '+' : ''}${s.ma20_position}%`,
+    cls: Math.abs(s.ma20_position) > 10 ? 'bearish' : 'neutral',
+    detail: Math.abs(s.ma20_position) > 10 ? '偏离20日均线较远，有均值回归压力' : '价格在20日均线附近运行'
+  });
+
+  // Resistance proximity
+  if (sr.resistance.length > 0) {
+    const dist = ((sr.resistance[0] / s.current_price - 1) * 100);
+    signals.push({
+      label: '距阻力位', value: `${dist.toFixed(1)}%`,
+      cls: dist < 3 ? 'bearish' : 'neutral',
+      detail: dist < 3 ? `距最近阻力¥${sr.resistance[0]}仅${dist.toFixed(1)}%，突破或遇阻` : `距最近阻力¥${sr.resistance[0]}空间充足`
+    });
+  }
+
+  // Support proximity
+  if (sr.support.length > 0) {
+    const dist = ((s.current_price / sr.support[0] - 1) * 100);
+    signals.push({
+      label: '距支撑位', value: `${dist.toFixed(1)}%`,
+      cls: dist < 3 ? 'bullish' : 'neutral',
+      detail: dist < 3 ? `距最近支撑¥${sr.support[0]}仅${dist.toFixed(1)}%` : `距最近支撑¥${sr.support[0]}${dist.toFixed(1)}%`
+    });
+  }
+
+  // Overall assessment
+  const bullCount = signals.filter(sig => sig.cls === 'bullish').length;
+  const bearCount = signals.filter(sig => sig.cls === 'bearish').length;
+  const overall = bullCount > bearCount ? { v: '偏多', c: 'bullish' } :
+                  bearCount > bullCount ? { v: '偏空', c: 'bearish' } :
+                  { v: '震荡', c: 'neutral' };
+
+  const qaGrid = document.getElementById('qaGrid');
+  qaGrid.innerHTML = `
+    <div class="signal-card ${overall.c}">
+      <div class="qa-label">综合研判</div>
+      <div class="qa-value" style="font-size:1.3rem"><span class="qa-signal ${overall.c}">${overall.v}</span></div>
+      <div style="font-size:0.78rem;color:var(--text-secondary);margin-top:4px">
+        多头信号${bullCount}个 · 空头信号${bearCount}个 · 中性${signals.length - bullCount - bearCount}个
+      </div>
+    </div>
+    ${signals.map(sig => `
+      <div class="qa-item">
+        <div class="qa-label">${sig.label}</div>
+        <div class="qa-value"><span class="qa-signal ${sig.cls}">${sig.value}</span></div>
+        <div style="font-size:0.73rem;color:var(--text-muted);margin-top:2px">${sig.detail}</div>
+      </div>
+    `).join('')}
+  `;
+}
+
+// ============================================================
+// Data Table
+// ============================================================
+function renderTable(data) {
+  const ohlc = data.ohlc;
+  const recent = ohlc.slice(-20).reverse();
+
+  const headers = ['日期', '开盘', '收盘', '最高', '最低', '涨跌幅%', '成交量', '换手率%', 'MACD_DIF', 'RSI'];
+  const thead = document.querySelector('#dataTable thead tr');
+  thead.innerHTML = headers.map(h => `<th>${h}</th>`).join('');
+
+  const tbody = document.querySelector('#dataTable tbody');
+  tbody.innerHTML = recent.map(d => {
+    const cls = d.pct_chg >= 0 ? 'up' : 'down';
+    return `
+      <tr>
+        <td>${d.date}</td>
+        <td>${d.open}</td>
+        <td class="${cls}">${d.close}</td>
+        <td>${d.high}</td>
+        <td>${d.low}</td>
+        <td class="${cls}">${d.pct_chg >= 0 ? '+' : ''}${d.pct_chg}%</td>
+        <td>${(d.volume / 10000).toFixed(0)}万</td>
+        <td>${d.turnover}%</td>
+        <td>${d.MACD_DIF?.toFixed(3) || 'N/A'}</td>
+        <td>${d.RSI || 'N/A'}</td>
+      </tr>`;
+  }).join('');
+}
+
+// ============================================================
+// Main
+// ============================================================
+async function main() {
+  const data = await loadData();
+  if (!data) return;
+
+  document.getElementById('lastUpdated').textContent =
+    `最后更新: ${data.metadata.last_updated} · ${data.metadata.data_points} 条数据`;
+
+  renderStats(data);
+  renderKline(data);
+  renderMACD(data);
+  renderRSI(data);
+  renderKDJ(data);
+  renderBOLL(data);
+  renderVolume(data);
+  renderSR(data);
+  renderSRPanel(data);
+  renderQA(data);
+  renderTable(data);
+
+  // Responsive resize
+  window.addEventListener('resize', () => {
+    ['chartKline', 'chartMACD', 'chartRSI', 'chartKDJ', 'chartBOLL', 'chartVolume', 'chartSR'].forEach(id => {
+      Plotly.Plots.resize(document.getElementById(id));
+    });
+  });
+}
+
+document.addEventListener('DOMContentLoaded', main);
+</script>
+
+</body>
+</html>
